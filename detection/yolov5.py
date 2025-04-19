@@ -155,7 +155,7 @@ def run_flask():
     app.run(host='0.0.0.0', port=5000, threaded=True)
 
 def main():
-    url = 'http://192.168.1.10/cam-hi.jpg'
+    url = 'http://192.168.164.206/cam-hi.jpg'
     win_name = 'ESP32 CAMERA - YOLOv5 Detection'
     cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
 

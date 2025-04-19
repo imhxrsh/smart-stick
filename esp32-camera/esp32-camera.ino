@@ -18,7 +18,7 @@ TinyGPSPlus gps;
 const int CRASH_DISTANCE_CM = 10;  // Object <10cm = "unsafe"
 const char* WIFI_SSID = "Harsh";
 const char* WIFI_PASS = "aadarsh1212";
-const char* SERVER_URL = "http://192.168.1.69/update_location";  // Update this!
+const char* SERVER_URL = "http://192.168.164.76:5000/update_location";  // Update this!
 
 WebServer server(80);
 
@@ -98,8 +98,8 @@ void serveJpg() {
     server.send(503, "", "");
     return;
   }
-  Serial.printf("CAPTURE OK %dx%d %db\n", frame->getWidth(), frame->getHeight(),
-                static_cast<int>(frame->size()));
+  //Serial.printf("CAPTURE OK %dx%d %db\n", frame->getWidth(), frame->getHeight(),
+    //            static_cast<int>(frame->size()));
 
   server.setContentLength(frame->size());
   server.send(200, "image/jpeg");
@@ -108,21 +108,21 @@ void serveJpg() {
 }
 
 void handleJpgLo() {
-  Serial.println("Attempting to set low resolution");
+  //Serial.println("Attempting to set low resolution");
   if (!esp32cam::Camera.changeResolution(loRes)) {
     Serial.println("SET-LO-RES FAIL");
   } else {
-    Serial.println("Low resolution set successfully");
+    //Serial.println("Low resolution set successfully");
   }
   serveJpg();
 }
 
 void handleJpgHi() {
-  Serial.println("Attempting to set high resolution");
+  //Serial.println("Attempting to set high resolution");
   if (!esp32cam::Camera.changeResolution(hiRes)) {
     Serial.println("SET-HI-RES FAIL");
   } else {
-    Serial.println("High resolution set successfully");
+    //Serial.println("High resolution set successfully");
   }
   serveJpg();
 }
@@ -207,7 +207,7 @@ void loop() {
     unsafeCount++;
     Serial.print("Unsafe count: ");
     Serial.println(unsafeCount);
-    if (unsafeCount > 7) {  // Require 3 consecutive unsafe readings
+    if (unsafeCount > 7) {  // Require  consecutive unsafe readings
       digitalWrite(buzzerPin, HIGH);
       Serial.println("CRASH DETECTED! Sending alert...");
       sendCrashAlert(lat, lon, true);
@@ -218,7 +218,6 @@ void loop() {
     digitalWrite(buzzerPin, LOW);
     unsafeCount = 0;
   }
-
 
   delay(10);
 }
