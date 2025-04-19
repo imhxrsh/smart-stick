@@ -6,6 +6,9 @@ import pyttsx3
 import threading
 import time
 from queue import Queue
+from flask import Flask, request, jsonify
+
+app = Flask(__name__)
 
 class ObjectDetector:
     def __init__(self, model_name='yolov5m', conf_threshold=0.3):
@@ -15,6 +18,7 @@ class ObjectDetector:
         self.tts_engine = self.init_tts()
         self.last_alert_time = 0
         self.alert_cooldown = 3
+        self.current_status = "safe"
 
     def get_hazardous_objects(self):
         """Return optimized list of hazardous objects."""
@@ -82,7 +86,10 @@ class ObjectDetector:
             alerts.append(f"{hazard} detected")
 
         if alerts:
+            self.current_status = "unsafe"
             self.text_to_speech("Warning! " + ". ".join(alerts))
+        else:
+            self.current_status = "safe"
 
 class FrameBuffer:
     """Buffer to handle frame processing in separate threads."""
@@ -101,29 +108,69 @@ class FrameBuffer:
         return self.latest_frame
 
 def camera_thread(url, frame_buffer):
-    """Thread for continuously capturing frames from ESP32 CAM."""
     while True:
         try:
-            img_resp = urllib.request.urlopen(url, timeout=2)
-            img_np = np.array(bytearray(img_resp.read()), dtype=np.uint8)
-            frame = cv2.imdecode(img_np, -1)
-            frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
-            frame_buffer.put(frame)
+            # Add timeout parameter
+            with urllib.request.urlopen(url, timeout=3) as img_resp:
+                img_np = np.array(bytearray(img_resp.read()), dtype=np.uint8)
+                frame = cv2.imdecode(img_np, -1)
+                if frame is None:
+                    print("Empty frame received")
+                    continue
+                frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
+                frame_buffer.put(frame)
         except Exception as e:
-            print(f"Camera error: {e}")
-            time.sleep(0.1)
+            print(f"Camera error: {str(e)}")
+            time.sleep(1)  # Longer sleep on error
+
+@app.route('/update_location', methods=['POST'])
+def update_location():
+    """Endpoint to receive GPS data and status updates."""
+    try:
+        data = request.get_json()
+        lat = data.get('lat')
+        lon = data.get('lon')
+        status = data.get('status', detector.current_status)
+        
+        # Here you can add your wrapper logic for unsafe conditions later
+        print(f"Received location update - Lat: {lat}, Lon: {lon}, Status: {status}")
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Location updated',
+            'received_data': {
+                'latitude': lat,
+                'longitude': lon,
+                'status': status
+            }
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 400
+
+def run_flask():
+    """Run Flask server in a separate thread."""
+    app.run(host='0.0.0.0', port=5000, threaded=True)
 
 def main():
-    url = 'http://YOUR_IP/cam-hi.jpg'
+    url = 'http://192.168.1.10/cam-hi.jpg'
     win_name = 'ESP32 CAMERA - YOLOv5 Detection'
     cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
 
+    global detector
     detector = ObjectDetector(model_name='yolov5m', conf_threshold=0.4)
     frame_buffer = FrameBuffer(max_size=2)
 
     threading.Thread(
         target=camera_thread,
         args=(url, frame_buffer),
+        daemon=True
+    ).start()
+
+    threading.Thread(
+        target=run_flask,
         daemon=True
     ).start()
 
