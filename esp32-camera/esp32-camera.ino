@@ -16,8 +16,8 @@ TinyGPSPlus gps;
 
 // Thresholds
 const int CRASH_DISTANCE_CM = 10;  // Object <10cm = "unsafe"
-const char* WIFI_SSID = "Harsh";
-const char* WIFI_PASS = "aadarsh1212";
+const char* WIFI_SSID = "esp";
+const char* WIFI_PASS = "1234567890";
 const char* SERVER_URL = "http://192.168.164.76:5000/update_location";  // Update this!
 
 WebServer server(80);
